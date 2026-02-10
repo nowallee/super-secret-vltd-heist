@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OPERATION: VLTD v14</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg-1: #37112a;
+  --bg-2: #120015;
+  --accent: #ff5d8f;
+  --accent-2: #ff9ccf;
+  --glass: rgba(255,255,255,0.06);
+  --muted: #ffeef6;
+  --text: #fff8fb;
+}
+
+html,body{height:100%;overflow:hidden}
+body {
+  margin: 0;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: radial-gradient(ellipse at 10% 20%, rgba(255,140,175,0.06) 0%, transparent 20%), radial-gradient(ellipse at 90% 80%, rgba(255,93,143,0.04) 0%, transparent 18%), linear-gradient(180deg,var(--bg-1), var(--bg-2));
+  color: var(--text);
+  text-align: center;
+  overflow-x: hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+h1, h2 {
+  font-family: 'Playfair Display', serif;
+  margin: 18px 0;
+  color: var(--muted);
+  text-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+/* Start screen layout */
+#start{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding-top:6vh;padding-bottom:6vh}
+.title{font-size:42px;line-height:1.02;margin:0;padding:0;background:linear-gradient(90deg,var(--accent),#ff81b9, var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 8px 30px rgba(30,6,20,0.55)}
+
+.title-emoji{
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  color: inherit;
+  text-shadow: inherit;
+  margin-right: 8px;
+}
+.subtitle{color:rgba(255,230,243,0.9);margin-top:6px;font-size:14px;letter-spacing:1px}
+
+/* Back button */
+.back-btn{
+  position:absolute;
+  bottom:28px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:8px 14px;
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border:1px solid rgba(255,255,255,0.06);
+  color:var(--muted);
+  z-index:30;
+}
+
+/* Sections */
+.section {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  height: 100vh;
+  box-sizing: border-box;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .36s ease, transform .36s ease;
+  overflow: hidden;
+}
+
+.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+button {
+  padding: 12px 28px;
+  font-size: 16px;
+  background: linear-gradient(180deg,var(--accent),var(--accent-2));
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  margin: 10px;
+  font-weight:600;
+}
+
+input {
+  padding: 12px;
+  font-size: 16px;
+  width: 260px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+
+video {
+  width: 90%;
+  max-width: 640px;
+  min-height: 360px;
+  height: auto;
+  border-radius: 16px;
+  margin: 20px 0;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.03);
+  background: #000;
+  display: block;
+  object-fit: contain;
+}
+
+.node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  margin: 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255,93,143,0.15), rgba(255,156,196,0.06));
+  color: var(--muted);
+  font-weight:700;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: 0 8px 24px rgba(19,5,14,0.5);
+  position: relative;
+}
+
+.node.locked { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.poem { white-space: pre-line; max-width: 700px; margin: auto; color: var(--muted); }
+
+/* Shake animation for wrong answers */
+@keyframes shake{ 0%,100%{transform:translateX(0)} 10%,30%,50%,70%,90%{transform:translateX(-6px)} 20%,40%,60%,80%{transform:translateX(6px)} }
+.shake{ animation:shake .4s ease-in-out; }
+
+/* Message displays for errors and success */
+.msgDisplay{ display:none; font-size:14px; margin-top:8px; font-weight:600; }
+.msgDisplay.error{ color:#ff5d8f; }
+.msgDisplay.success{ color:#81ff9c; }
+
+/* Poem Complete button spacing to avoid back button overlap */
+.complete-btn{ margin-top:18px; margin-bottom:110px; }
+
+/* No label fleeing transition */
+#noLabel{ transition: left .12s ease, top .12s ease; }
+
+/* Modal for final code input */
+.modal{ position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9990; opacity:0; pointer-events:none; transition:opacity .3s ease; }
+.modal.show{ opacity:1; pointer-events:auto; }
+.modal-content{ background:linear-gradient(180deg,var(--bg-1),var(--bg-2)); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:40px; box-shadow:0 20px 60px rgba(0,0,0,0.8); text-align:center; width:90%; max-width:420px; }
+.modal-content h2{ color:var(--muted); margin-top:0; }
+.modal-content input{ width:100%; margin:16px 0; }
+.modal-content button{ margin-top:16px; }
+
+.skyline { position: fixed; bottom: 0; width: 100%; height: 220px; background: linear-gradient(180deg, transparent, rgba(18,0,20,0.9)); pointer-events: none; mix-blend-mode: screen; }
+
+.hearts{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.heart{position:absolute;left:50%;top:110%;width:18px;height:18px;background:var(--accent);transform:translateX(-50%) rotate(45deg);border-radius:4px 4px 0 0;opacity:.9;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+.heart:before,.heart:after{content:'';position:absolute;width:18px;height:18px;background:var(--accent);border-radius:50%}
+.heart:before{top:-9px;left:0}
+.heart:after{left:9px;top:0}
+@keyframes floatUp{0%{transform:translateY(0) rotate(45deg);opacity:0}10%{opacity:1}100%{transform:translateY(-140vh) rotate(25deg);opacity:0}}
+.heart{animation:floatUp 9s linear infinite}
+/* Confetti pieces */
+.confetti{position:fixed;z-index:9999;pointer-events:none;width:10px;height:14px;opacity:0.95}
+@keyframes confettiFall{0%{transform:translateY(-10vh) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(360deg);opacity:0}}
+
+/* Graphical choice buttons */
+.choice-btn{ width:160px; height:160px; border-radius:18px; display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,0.45); border:none; cursor:pointer; font-size:18px; color:#1a0320}
+.choice-yes{ background: linear-gradient(180deg,#ff9ccf,#ff5d8f); }
+.choice-no{ background: linear-gradient(180deg,#ffd1e6,#ffc0e0); position:fixed; z-index:60; }
+.choice-emoji{ font-size:40px; margin-bottom:8px }
+.choice-text{ font-weight:700; letter-spacing:1px }
+
+/* Glorious picture frame */
+.glory-frame{
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 30px;
+  border: 3px solid var(--accent);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 
+    0 0 20px rgba(255,93,143,0.5),
+    0 0 40px rgba(255,93,143,0.3),
+    0 0 60px rgba(255,156,196,0.2),
+    inset 0 0 20px rgba(255,93,143,0.1);
+  background: linear-gradient(135deg, rgba(255,93,143,0.05), rgba(255,156,196,0.05));
+  backdrop-filter: blur(10px);
+  animation: gloryGlow 3s ease-in-out infinite;
+}
+
+@keyframes gloryGlow{
+  0%, 100%{ box-shadow: 0 0 20px rgba(255,93,143,0.5), 0 0 40px rgba(255,93,143,0.3), 0 0 60px rgba(255,156,196,0.2), inset 0 0 20px rgba(255,93,143,0.1); }
+  50%{ box-shadow: 0 0 30px rgba(255,93,143,0.7), 0 0 50px rgba(255,93,143,0.5), 0 0 80px rgba(255,156,196,0.3), inset 0 0 30px rgba(255,93,143,0.15); }
+}
+
+.glory-frame img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.glory-placeholder{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255,93,143,0.2), rgba(255,156,196,0.2));
+  font-size: 80px;
+  color: var(--accent);
+}
+
+/* Mute button */
+.mute-btn{
+  position: fixed;
+  bottom: 28px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  transition: all .2s ease;
+}
+
+.mute-btn:hover{
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  border-color: rgba(255,255,255,0.15);
+}
+
+.mute-btn-tooltip{
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.mute-btn:hover .mute-btn-tooltip{
+  opacity: 1;
+}
+
+/* Skip button */
+.skip-btn{
+  position: fixed;
+  bottom: 28px;
+  left: 76px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  transition: all .2s ease;
+}
+
+.skip-btn:hover{
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  border-color: rgba(255,255,255,0.15);
+}
+
+.skip-btn-tooltip{
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.skip-btn:hover .skip-btn-tooltip{
+  opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<div class="hearts">
+  <span class="heart"></span>
+  <span class="heart"></span>
+  <span class="heart"></span>
+  <span class="heart"></span>
+  <span class="heart"></span>
+  <span class="heart"></span>
+  <span class="heart"></span>
+  <span class="heart"></span>
+</div>
+
+<!-- START -->
+<div id="start" class="section active">
+  <h1 class="title"><span class="title-emoji">🕵🏽‍♂️</span>OPERATION: VLTD v14</h1>
+  <div class="subtitle">A CLASSIFIED decryption mission for our favorite Agent Efarata Bete</div>
+  <div>
+    <button onclick="playMusicAndShow('intro')">PLAY</button>
+    <button onclick="show('credits')">CREDITS</button>
+  </div>
+</div>
+
+<div id="credits" class="section">
+  <div class="glory-frame" id="gloryFrame">
+    <img id="gloryImage" src="videos/glory.jpg" alt="Glory Photo">
+    <div class="glory-placeholder" id="gloryPlaceholder" style="display:none">📸</div>
+  </div>
+  <p>Designed by you very glorious beauteous handsome amazing boyfriend.</p>
+  <button class="back-btn" onclick="show('start')">Back</button>
+</div>
+
+<!-- INTRO -->
+<div id="intro" class="section">
+  <button class="back-btn" onclick="show('start')">Back</button>
+  <video src="videos/intro.mp4" id="introVideo" controls preload="metadata"></video>
+  <br>
+  <button id="skipBtn" style="display:none" onclick="show('map')">Skip</button>
+</div>
+
+<!-- MAP -->
+<div id="map" class="section">
+  <button class="back-btn" onclick="show('start')">Back</button>
+  <h2>Select a Level</h2>
+  <div id="nodes"></div>
+  <div id="mapMsg" class="msgDisplay"></div>
+</div>
+
+<!-- LEVEL -->
+<div id="level" class="section">
+  <button class="back-btn" onclick="show('map')">Back</button>
+  <video id="levelVideo" controls preload="metadata"></video>
+  <p id="clue"></p>
+  <input id="answer">
+  <div id="errorMsg"></div>
+  <br>
+  <button onclick="submit()">Submit</button>
+</div>
+
+<!-- FINAL LOCK -->
+<div id="finalLock" class="section">
+  <button class="back-btn" onclick="show('map')">Back</button>
+  <h2>Final Lock</h2>
+  <input id="finalCode" placeholder="Enter code">
+  <div id="errorMsg"></div>
+  <br>
+  <button onclick="unlockFinal()">Unlock</button>
+</div>
+
+<!-- FINAL POEM -->
+<div id="finalPoem" class="section">
+  <button class="back-btn" onclick="show('map')">Back</button>
+  <div class="poem">
+Before we ever named this,
+there was a <input id="p1"> —
+quiet, unannounced.
+
+Somewhere along the way,
+we started <input id="p2">,
+slowly, honestly.
+
+Even in the silence,
+we were still <input id="p3">.
+
+And now,
+we are <input id="p4"> —
+together.
+  </div>
+  <div id="errorMsg"></div>
+  <br>
+  <button class="complete-btn" onclick="finishPoem()">Complete</button>
+</div>
+
+<!-- FINAL -->
+<!-- FINAL VIDEO (plays after poem) -->
+<div id="finalVideo" class="section">
+  <button class="back-btn" onclick="show('start')">Back</button>
+  <button id="skipFinal" style="position:absolute;right:20px;top:18px;padding:8px 14px;border-radius:999px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.06);color:var(--muted);" onclick="skipFinal()">Skip</button>
+  <video id="finalVideoPlayer" src="videos/final.mp4" controls></video>
+</div>
+
+<!-- FINAL CHOICE -->
+<div id="finalChoice" class="section">
+  <button class="back-btn" onclick="show('start')">Back</button>
+  <h2>Will you be my Valentine?</h2>
+  <div id="choiceWrap" style="position:relative;width:100%;height:260px;margin:20px auto;display:flex;align-items:center;justify-content:center;gap:40px;">
+    <button id="yesBtn" class="choice-btn choice-yes" aria-label="Yes">
+      <div class="choice-emoji">💖</div>
+      <div class="choice-text">Yes</div>
+    </button>
+    <button id="noBtn" class="choice-btn choice-no" aria-hidden="true">
+      <div class="choice-emoji">🙃</div>
+      <div class="choice-text">No</div>
+    </button>
+  </div>
+  <div id="finalMsg" class="msgDisplay" style="margin-top:12px"></div>
+</div>
+
+<div class="skyline"></div>
+<audio id="bgMusic" preload="auto"></audio>
+<audio id="errorSound" src="audio/error.mp4" preload="auto"></audio>
+<audio id="successSound" src="audio/success.mp3" preload="auto"></audio>
+
+<!-- Mute Button -->
+<button id="muteBtn" class="mute-btn" onclick="toggleMute()">
+  <span id="muteIcon">🔊</span>
+  <div class="mute-btn-tooltip">Mute Background Music</div>
+</button>
+
+<!-- Skip Button -->
+<button id="skipSongBtn" class="skip-btn" onclick="skipSong()">
+  <span>⏭️</span>
+  <div class="skip-btn-tooltip">Skip to Next Song</div>
+</button>
+
+<!-- Final Code Modal -->
+<div id="finalCodeModal" class="modal">
+  <div class="modal-content">
+    <h2>Final Challenge</h2>
+    <p>Enter the code to unlock the finale:</p>
+    <input id="finalCodeInput" type="text" placeholder="Enter code" />
+    <div id="finalCodeMsg" class="msgDisplay" style="margin-top:8px"></div>
+    <button onclick="checkFinalCode()">Unlock</button>
+  </div>
+</div>
+
+<script>
+let progress = JSON.parse(localStorage.getItem("progress")) || 0;
+let codes = ["SOUTH AFRICA","MYRTLE BEACH","NEW YORK","10/6 10/7"];
+let words = ["BEGINNING","FALLING","WAITING","CHOOSING"];
+let current = 0;
+let isSubmitting = false; // Guard flag to prevent multiple submissions
+
+// Helper function to play sound effects without interrupting background music
+function playSound(soundId) {
+  const sound = document.getElementById(soundId);
+  if(!sound) {
+    console.warn('Sound element not found:', soundId);
+    return;
+  }
+  
+  // Set appropriate volumes for different sounds
+  sound.volume = (soundId === 'successSound') ? 0.5 : 0.6;
+  sound.currentTime = 0;
+  
+  // Attempt to play the sound
+  const playAttempt = sound.play();
+  
+  if(playAttempt !== undefined) {
+    playAttempt
+      .then(() => {
+        // Sound is playing
+      })
+      .catch((error) => {
+        console.error('Failed to play sound:', soundId, error);
+        // Try again after a small delay
+        setTimeout(() => {
+          try {
+            sound.play().catch(e => console.error('Retry failed:', e));
+          } catch(e) {}
+        }, 100);
+      });
+  }
+}
+
+// Playlist management
+let bgmPlaylist = [
+  "audio/MyLady.mp3",
+  "audio/RaceMyMind.mp3",
+  "audio/Raindance.mp3",
+  "audio/TakeCare.mp3",
+  "audio/ZipUpMyFly.mp3"
+];
+let playlistOrder = []; // shuffled playlist
+let currentSongIndex = 0;
+
+// Fisher-Yates shuffle
+function shufflePlaylist(){
+  const newOrder = [...bgmPlaylist].sort(()=>Math.random()-0.5);
+  // Ensure first song is different from last played
+  if(playlistOrder.length > 0 && newOrder[0] === playlistOrder[playlistOrder.length-1]){
+    const temp = newOrder[0];
+    newOrder[0] = newOrder[1]||""; newOrder[1] = temp;
+  }
+  playlistOrder = newOrder;
+  currentSongIndex = 0;
+}
+
+function playNextSong(){
+  if(playlistOrder.length === 0) shufflePlaylist();
+  const bgm = document.getElementById('bgMusic');
+  if(!bgm) return;
+  // If index has run past the end, reshuffle and reset
+  if(currentSongIndex >= playlistOrder.length) shufflePlaylist();
+  if(currentSongIndex >= playlistOrder.length) currentSongIndex = 0;
+  bgm.src = playlistOrder[currentSongIndex];
+  bgm.loop = false; // ensure individual track doesn't loop
+  bgm.volume = 0.15; // set background music to 15%
+  bgm.onended = playNextSong; // Re-ensure onended handler is set
+  try{ bgm.play(); }catch(e){}
+  currentSongIndex++;
+  if(currentSongIndex >= playlistOrder.length) shufflePlaylist();
+}
+
+function initBGM(){
+  shufflePlaylist();
+  const bgm = document.getElementById('bgMusic');
+  if(!bgm) return;
+  bgm.loop = false;
+  bgm.volume = 0.15; // Set background music to 15% level
+  bgm.onended = playNextSong;
+  playNextSong();
+}
+
+/* Weekday-based locking (temporarily disabled for testing)
+// Weekday-based locking: Level 1 -> Monday(1), 2 -> Tuesday(2), 3 -> Wednesday(3), 4 -> Thursday(4)
+function todayIndex(){ return new Date().getDay(); } // 0=Sun,1=Mon...
+function weekdayName(n){ return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][n]||'' }
+function levelAssignedDay(i){ return i + 1 } // 0->1(Mon),1->2(Tue),2->3(Wed),3->4(Thu)
+function isLevelAvailable(i){
+  const assigned = levelAssignedDay(i);
+  const td = todayIndex();
+  const priorOk = progress >= (i - 1);
+  const dayOk = td >= assigned;
+  return priorOk && dayOk;
+}
+*/
+
+// Day locking disabled for testing: simple availability based on progress only
+function todayIndex(){ return new Date().getDay(); }
+function weekdayName(n){ return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][n]||'' }
+function levelAssignedDay(i){ return i + 1 }
+function isLevelAvailable(i){ return i <= progress; }
+
+function show(id){
+  document.querySelectorAll('.section').forEach(s => {
+    s.classList.remove('active');
+    const v = s.querySelector('video');
+    if(v && !v.paused){ try{v.pause(); v.currentTime=0;}catch(e){} }
+  });
+  const target = document.getElementById(id);
+  if(!target) return;
+  target.classList.add('active');
+  const tv = target.querySelector('video');
+  if(tv){
+    // Set up audio ducking if video has a source
+    if(tv.src || tv.children.length > 0){
+      tv.currentTime = 0;
+      setupVideoAudioDucking(tv);
+      // Force load the video
+      tv.load();
+      // Try to play with a small delay
+      setTimeout(() => {
+        try { tv.play().catch(()=>{}); } catch(e) {}
+      }, 50);
+    }
+  }
+}
+
+// Manage background music volume when videos play
+function setupVideoAudioDucking(videoElement){
+  const bgm = document.getElementById('bgMusic');
+  if(!bgm) return;
+  
+  // Lower background music when video plays
+  videoElement.onplay = ()=>{ bgm.volume = 0.04; };
+  // Restore background music when video pauses or ends
+  videoElement.onpause = ()=>{ bgm.volume = 0.15; };
+  videoElement.onended = ()=>{ bgm.volume = 0.15; };
+}
+
+setTimeout(()=>document.getElementById("skipBtn").style.display="inline",5000);
+
+function loadMap(){
+  const nodes = document.getElementById("nodes");
+  nodes.innerHTML = "";
+  const td = todayIndex();
+  for(let i=0;i<codes.length;i++){
+    let n = document.createElement("div");
+    const available = isLevelAvailable(i);
+    n.className = "node" + (available ? "" : " locked");
+    if(available){
+      n.innerHTML = "Level "+(i+1);
+      n.onclick = ()=>startLevel(i);
+    } else {
+      const assigned = levelAssignedDay(i);
+      // show a hint whether it's waiting on day or previous level
+      if(progress < (i-1)) n.title = 'Complete previous levels first';
+      else n.title = `Available on ${weekdayName(assigned)}`;
+      n.innerHTML = `🔒`;
+    }
+    nodes.appendChild(n);
+  }
+  // If all levels completed (progress == codes.length), show FINAL button
+  if(progress >= codes.length){
+    let fn = document.createElement('div');
+    fn.className = 'node';
+    fn.innerHTML = 'FINAL';
+    fn.onclick = ()=> startFinal();
+    nodes.appendChild(fn);
+  }
+}
+
+function startLevel(i){
+  const mapMsg = document.getElementById("mapMsg");
+  if(!isLevelAvailable(i)){
+    const assigned = levelAssignedDay(i);
+    mapMsg.className = "msgDisplay error";
+    if(progress < (i-1)){
+      mapMsg.textContent = "✗ Please complete previous levels first.";
+    } else {
+      mapMsg.textContent = `✗ Level ${i+1} unlocks on ${weekdayName(assigned)}.`;
+    }
+    mapMsg.style.display = "block";
+    playSound("errorSound");
+    return;
+  }
+  mapMsg.style.display = "none";
+  current = i;
+  isSubmitting = false; // Reset submission guard for new level
+  // Set video source BEFORE showing the section
+  document.getElementById("levelVideo").src = `videos/day${i+1}.mp4`;
+  show("level");
+  document.getElementById("answer").value = "";
+  document.getElementById("errorMsg").style.display = "none";
+  const clues = [
+    "Before memory had language, our footsteps landed on the same soil. Where was it?", // Level 1
+    "A serene morning by the waves, where the sun rose as we walked side by side. Where did love awaken?", // Level 2 (Beach memory)
+    "A city that never sleeps, because it dreams for those brave enough to arrive. Which city?", // Level 3
+    "Two nights. One choice. Time split itself so love could begin. What are the dates?" // Level 4
+  ];
+  document.getElementById("clue").innerText = clues[i];
+}
+
+function submit(){
+  // Guard: prevent multiple submissions while one is in progress
+  if(isSubmitting) return;
+  
+  let ans = document.getElementById("answer").value.toUpperCase().trim();
+  const input = document.getElementById("answer");
+  const submitBtn = input.parentElement.querySelector("button[onclick='submit()']");
+  const errorMsg = document.getElementById("errorMsg");
+  
+  if(ans === codes[current]){
+    isSubmitting = true; // Set guard to prevent re-submission
+    
+    // Correct answer: show success message and play success sound
+    errorMsg.className = "msgDisplay success";
+    errorMsg.textContent = "✓ Correct! Level unlocked!";
+    errorMsg.style.display = "block";
+    
+    // Play success sound
+    playSound("successSound");
+    
+    // Only increment progress if this is the next unlocked level (current === progress)
+    // allow progress to reach codes.length to mark "all levels completed"
+    if(current === progress && progress < codes.length) progress++;
+    localStorage.setItem("progress",JSON.stringify(progress));
+    
+    // Navigate after a short delay
+    setTimeout(()=>{
+      show("map");
+      loadMap();
+      isSubmitting = false; // Reset guard after navigation
+    }, 800);
+  } else {
+    // Wrong answer: shake and show error text
+    errorMsg.className = "msgDisplay error";
+    errorMsg.textContent = "✗ Hmm… that doesn't seem right. Try again!";
+    errorMsg.style.display = "block";
+    
+    // Apply shake to input and button
+    input.classList.add("shake");
+    if(submitBtn) submitBtn.classList.add("shake");
+    
+    // Play error sound
+    playSound("errorSound");
+    
+    // Remove shake class after animation
+    setTimeout(()=>{
+      input.classList.remove("shake");
+      if(submitBtn) submitBtn.classList.remove("shake");
+    }, 400);
+  }
+}
+
+function unlockFinal(){
+  const td = todayIndex();
+  const input = document.getElementById("finalCode");
+  const unlockBtn = input.parentElement.querySelector("button[onclick='unlockFinal()']");
+  const errorMsg = document.getElementById("errorMsg");
+  let fc = input.value.toUpperCase().trim();
+  
+  if(td < 5) {
+    errorMsg.className = "msgDisplay error";
+    errorMsg.textContent = "✗ The final page is available on Friday.";
+    errorMsg.style.display = "block";
+    const sound = document.getElementById("errorSound");
+    if(sound) try{ sound.currentTime = 0; sound.play(); }catch(e){}
+    return;
+  }
+  
+  if(fc === "NANA&NOLAWI") {
+    errorMsg.className = "msgDisplay success";
+    errorMsg.textContent = "✓ Code accepted!";
+    errorMsg.style.display = "block";
+    playSound("successSound");
+    setTimeout(()=>show("finalPoem"), 800);
+  } else {
+    errorMsg.className = "msgDisplay error";
+    errorMsg.textContent = "✗ Incorrect code. You need the special key!";
+    errorMsg.style.display = "block";
+    
+    input.classList.add("shake");
+    if(unlockBtn) unlockBtn.classList.add("shake");
+    
+    playSound("errorSound");
+    
+    setTimeout(()=>{
+      input.classList.remove("shake");
+      if(unlockBtn) unlockBtn.classList.remove("shake");
+    }, 400);
+  }
+}
+
+function finishPoem(){
+  const errorMsg = document.getElementById("errorMsg");
+  if(
+    document.getElementById("p1").value.toUpperCase().trim()==="BEGINNING" &&
+    document.getElementById("p2").value.toUpperCase().trim()==="FALLING" &&
+    document.getElementById("p3").value.toUpperCase().trim()==="WAITING" &&
+    document.getElementById("p4").value.toUpperCase().trim()==="CHOOSING"
+  ) {
+    errorMsg.className = "msgDisplay success";
+    errorMsg.textContent = "✓ Complete! Playing final...";
+    errorMsg.style.display = "block";
+    playSound("successSound");
+    // show final video first, then final choice when video ends
+    setTimeout(()=>{
+      show('finalVideo');
+      const fv = document.getElementById('finalVideoPlayer');
+      if(fv){
+        fv.currentTime = 0;
+        fv.play().catch(()=>{});
+        const bgm = document.getElementById('bgMusic');
+        fv.onplay = ()=>{ if(bgm) bgm.volume = 0.04; };
+        fv.onended = ()=>{ if(bgm) bgm.volume = 0.15; show('finalChoice'); setupFinalChoice(); };
+      } else {
+        show('finalChoice'); setupFinalChoice();
+      }
+    }, 600);
+  } else {
+    errorMsg.className = "msgDisplay error";
+    errorMsg.textContent = "✗ Hmm… check the blanks again!";
+    errorMsg.style.display = "block";
+    playSound("errorSound");
+    const inputs = document.querySelectorAll("#finalPoem input");
+    inputs.forEach(inp => inp.classList.add("shake"));
+    setTimeout(()=>inputs.forEach(inp => inp.classList.remove("shake")), 400);
+  }
+}
+
+function celebrate(){
+  for(let i=0;i<20;i++){
+    const heart=document.createElement("span");
+    heart.className="heart";
+    heart.style.left=Math.random()*90+"%";
+    heart.style.width=heart.style.height=12+Math.random()*18+"px";
+    document.querySelector(".hearts").appendChild(heart);
+    setTimeout(()=>heart.remove(),9000);
+  }
+}
+
+// Confetti generator
+function confettiBurst(){
+  const colors=['#ff5d8f','#ffd27d','#ff9ccf','#81ff9c','#ffddf0'];
+  for(let i=0;i<60;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left = Math.random()*100+'%';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.transform = `translateY(-10vh) rotate(${Math.random()*360}deg)`;
+    c.style.animation = `confettiFall ${2+Math.random()*2}s linear forwards`;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),4000);
+  }
+}
+
+function startFinal(){
+  // show code unlock modal instead of poem directly
+  const modal = document.getElementById('finalCodeModal');
+  if(modal) modal.classList.add('show');
+  // clear input and message
+  const input = document.getElementById('finalCodeInput');
+  input.value = '';
+  document.getElementById('finalCodeMsg').style.display = 'none';
+  // focus input and allow Enter key or Escape to close
+  setTimeout(()=>input.focus(), 100);
+  input.onkeypress = (e)=>{ if(e.key==='Enter') checkFinalCode(); };
+  input.onkeydown = (e)=>{ if(e.key==='Escape'){ modal.classList.remove('show'); show('map'); } };
+}
+
+function setupFinalChoice(){
+  const wrap = document.getElementById('choiceWrap');
+  const noBtn = document.getElementById('noBtn');
+  const yesBtn = document.getElementById('yesBtn');
+  const finalMsg = document.getElementById('finalMsg');
+  if(!wrap || !noBtn || !yesBtn) return;
+  // reset
+  finalMsg.style.display = 'none';
+  yesBtn.disabled = false;
+  noBtn.style.display = 'block';
+  // initial placement for noBtn (right side)
+  const placeInitial = ()=>{
+    const x = Math.min(window.innerWidth - 180, Math.max(80, window.innerWidth*0.72));
+    const y = Math.max(120, window.innerHeight*0.45);
+    noBtn.style.left = x + 'px';
+    noBtn.style.top = y + 'px';
+  };
+  placeInitial();
+  // Position Yes to the left of center and No to the right of center as starting positions
+  const startYesX = Math.max(60, Math.floor(window.innerWidth * 0.38));
+  const startNoX = Math.min(window.innerWidth - 180, Math.floor(window.innerWidth * 0.62));
+  const startY = Math.max(120, Math.floor(window.innerHeight * 0.45));
+  // make yes fixed so both start side-by-side before No moves
+  yesBtn.style.position = 'fixed';
+  yesBtn.style.left = startYesX + 'px';
+  yesBtn.style.top = startY + 'px';
+  yesBtn.style.zIndex = 60;
+  yesBtn.style.transition = 'left .12s ease, top .12s ease';
+  // ensure no starts a bit to the right
+  noBtn.style.left = startNoX + 'px';
+  noBtn.style.top = startY + 'px';
+  // Aggressive fleeing across the whole viewport
+  const THRESH = 220;
+  function moveNoAway(cx, cy){
+    let nx, ny, attempts=0, ndist=0;
+    do{
+      nx = 60 + Math.random()*(window.innerWidth-120);
+      ny = 80 + Math.random()*(window.innerHeight-160);
+      const ddx = nx - cx; const ddy = ny - cy;
+      ndist = Math.sqrt(ddx*ddx + ddy*ddy);
+      attempts++;
+    } while(ndist < THRESH && attempts < 30);
+    noBtn.style.left = nx + 'px';
+    noBtn.style.top = ny + 'px';
+  }
+
+  document.addEventListener('mousemove', (e)=>{
+    const rect = noBtn.getBoundingClientRect();
+    const centerX = rect.left + rect.width/2;
+    const centerY = rect.top + rect.height/2;
+    const dx = e.clientX - centerX; const dy = e.clientY - centerY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < THRESH) moveNoAway(e.clientX, e.clientY);
+  });
+
+  // Ensure noBtn is not clickable
+  noBtn.onclick = (e)=>{ e.preventDefault(); moveNoAway(e.clientX||window.innerWidth/2, e.clientY||window.innerHeight/2); };
+
+  // Yes behavior
+  yesBtn.onclick = ()=>{
+    yesBtn.disabled = true;
+    finalMsg.className = 'msgDisplay success';
+    finalMsg.textContent = '✓ You said Yes!';
+    finalMsg.style.display = 'block';
+    playSound('successSound');
+    confettiBurst();
+  };
+}
+
+function skipFinal(){
+  const fv = document.getElementById('finalVideoPlayer');
+  const bgm = document.getElementById('bgMusic');
+  if(fv){ try{ fv.pause(); fv.currentTime = fv.duration || 0; }catch(e){} }
+  if(bgm) bgm.volume = 0.15;
+  show('finalChoice');
+  setupFinalChoice();
+}
+
+function playMusicAndShow(id){
+  const bg=document.getElementById('bgMusic');
+  if(!bg || !bg.src){ initBGM(); }
+  else if(bg.paused){ try{ bg.play(); }catch(e){} }
+  show(id);
+}
+
+function checkFinalCode(){
+  const input = document.getElementById('finalCodeInput');
+  const msg = document.getElementById('finalCodeMsg');
+  const code = input.value.toUpperCase().trim();
+  
+  if(code === "NOLAWI&NANA"){
+    msg.className = 'msgDisplay success';
+    msg.textContent = '✓ Code accepted!';
+    msg.style.display = 'block';
+    playSound('successSound');
+    // close modal and show poem
+    setTimeout(()=>{
+      const modal = document.getElementById('finalCodeModal');
+      if(modal) modal.classList.remove('show');
+      show('finalPoem');
+      document.getElementById('errorMsg').style.display='none';
+    }, 600);
+  } else {
+    msg.className = 'msgDisplay error';
+    msg.textContent = '✗ Incorrect code. Try again!';
+    msg.style.display = 'block';
+    playSound('errorSound');
+  }
+}
+
+function toggleMute(){
+  const bgm = document.getElementById('bgMusic');
+  const muteBtn = document.getElementById('muteBtn');
+  const muteIcon = document.getElementById('muteIcon');
+  
+  if(!bgm) return;
+  
+  if(bgm.muted){
+    bgm.muted = false;
+    muteIcon.textContent = '🔊';
+  } else {
+    bgm.muted = true;
+    muteIcon.textContent = '🔇';
+  }
+}
+
+function skipSong(){
+  const bgm = document.getElementById('bgMusic');
+  if(!bgm) return;
+  playNextSong();
+}
+
+loadMap();
+// Start background music immediately on page load
+initBGM();
+</script>
+
+</body>
+</html>
